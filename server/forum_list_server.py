@@ -1,4 +1,3 @@
-import re
 from urllib.parse import parse_qs, urljoin, urlsplit
 
 from bs4 import BeautifulSoup, Tag
@@ -15,8 +14,6 @@ class ForumListServer:
     def parse_forum_list(self, html: str) -> list[ForumListItem]:
         soup = BeautifulSoup(html, "html.parser")
         rows = soup.select(".search-list > table > tbody > tr")
-        if not rows:
-            raise ValueError("找不到列表資料列")
         return self._parse_rows(rows)
 
     def _parse_rows(self, rows: list[Tag]) -> list[ForumListItem]:
@@ -34,8 +31,7 @@ class ForumListServer:
 
     def _reply_status(self, row: Tag) -> str:
         node = row.select_one('td[data-title="會計師回覆狀態"]')
-        if node:
-            return node.get_text(" ", strip=True)
+        return node.get_text(" ", strip=True)
 
     def _build_record(self, row: Tag, status: str) -> ForumListItem:
         fields = self._link_fields(row)
@@ -45,22 +41,14 @@ class ForumListServer:
     def _link_fields(self, row: Tag) -> dict[str, str]:
         link = self._detail_link(row)
         url = urljoin(BASE_URL, str(link["href"]))
-        return dict(id=self._parse_id(url), title=link.get_text(strip=True), url=url)
+        return {"id": self._parse_id(url), "title": link.get_text(strip=True), "url": url}
 
     def _detail_link(self, row: Tag) -> Tag:
-        link = row.select_one('td[data-title="問題標題"] a[href]')
-        if link and link.get_text(strip=True):
-            return link
-        raise ValueError("缺少問題標題或詳情連結")
+        return row.select_one('td[data-title="問題標題"] a[href]')
 
     def _parse_id(self, url: str) -> str:
-        values = parse_qs(urlsplit(url).query, keep_blank_values=True).get("p", [])
-        if len(values) == 1 and re.fullmatch(r"[0-9]+", values[0]):
-            return values[0]
-        raise ValueError("詳情 URL 缺少合法且唯一的 p 參數")
+        return parse_qs(urlsplit(url).query, keep_blank_values=True)["p"][0]
 
     def _published_at(self, row: Tag) -> str:
         node = row.select_one('td[data-title="發表時間"]')
-        if node and node.get_text(strip=True):
-            return node.get_text(strip=True)
-        raise ValueError("缺少發表時間")
+        return node.get_text(strip=True)
