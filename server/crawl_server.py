@@ -25,6 +25,7 @@ class CrawlServer:
         records = self._crawl_pages()
         self.export.export_json(list(records.values()), self.output_dir / "forum_list.json")
         self.crawl_question_details()
+        self.export_question_csv()
 
     def _crawl_pages(self) -> dict[str, ForumListItem]:
         records: dict[str, ForumListItem] = {}
@@ -56,3 +57,8 @@ class CrawlServer:
             return
         response = self.http.get(item.url)
         records[item.id] = self.question_detail.parse_question_detail(response.text, item)
+
+    def export_question_csv(self) -> None:
+        content = (self.output_dir / "question_details.json").read_text(encoding="utf-8")
+        records = TypeAdapter(list[QuestionDetail]).validate_json(content)
+        self.export.export_qa_csv(records, self.output_dir / "qa.csv")
