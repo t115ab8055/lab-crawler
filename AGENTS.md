@@ -18,22 +18,22 @@
 
 - 遍歷所有 `tbody` 的資料列。
 - 回覆狀態欄位文字須包含「已回覆」才收錄；空白或其他狀態一律跳過。
-- 若狀態欄位節點不存在，直接拋出結構解析錯誤，不能當作一般未回覆。
+- 依固定結構直接讀取狀態欄位，不額外檢查節點是否存在。
 
 ## 3. ID 與去重
 
 - ID 使用詳情 URL 的 `p` 參數，以字串保存。
 - 列表及詳情 JSON 均以 ID 去重。遇到相同 ID 直接跳過，只保留第一筆，不合併資料。
 - 不同 ID 即使標題相同也不得直接合併。
-- 缺少合法 ID 的資料列直接拋出異常，不得自行編號替代。
+- 直接讀取 URL 的 p 參數，不驗證 ID 格式，也不自行編號替代。
 
 ## 4. JSON 欄位
 
 - 列表資料至少包含 `id`、`title`、`url`、`reply_status`、`published_at`。
 - 詳情資料沿用列表欄位，另包含 `question`、`question_raw_html`、`asker_name`、`industry`、`region`、`asked_at`、`view_count`、`answers`、`fetched_at`。
 - `answers` 為陣列，每項包含 `order`、`accountant_name`、`accountant_role`、`answered_at`、`text`、`raw_html`、`notice_text`。
-- `published_at` 為必要的非空字串，缺失或空白直接拋出錯誤。
-- 缺失的非必要欄位使用 `null`，不推測補值。
+- `published_at` 為必填字串，直接讀取網站內容。
+- Answer 與 QuestionDetail 所有欄位皆為必填型別；不新增手動欄位存在、空白或格式驗證。
 
 ## 5. 文字清理
 
@@ -55,7 +55,7 @@
 
 - HTTP 層僅使用 requests 的 `response.raise_for_status()` 檢查狀態，不額外偵測驗證頁。
 - HTTP、連線及逾時錯誤直接向上拋出，不自動重連、重試、退避或處理 `Retry-After`。
-- 列表與詳情仍依指定欄位解析；缺少問題正文或有效回答時直接拋出錯誤，不得算作成功 QA。
+- 列表與詳情依固定結構直接取值，保留 Pydantic 型別建模；不額外檢查欄位、正文或回答是否存在。
 
 ## 8. HTTP 存取與續跑
 
