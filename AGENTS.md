@@ -32,6 +32,7 @@
 - 列表資料至少包含 `id`、`title`、`url`、`reply_status`、`published_at`。
 - 詳情資料沿用列表欄位，另包含 `question`、`question_raw_html`、`asker_name`、`industry`、`region`、`asked_at`、`view_count`、`answers`、`fetched_at`。
 - `answers` 為陣列，每項包含 `order`、`accountant_name`、`accountant_role`、`answered_at`、`text`、`raw_html`、`notice_text`。
+- `published_at` 為必要的非空字串，缺失或空白直接拋出錯誤。
 - 缺失的非必要欄位使用 `null`，不推測補值。
 
 ## 5. 文字清理
@@ -83,6 +84,8 @@
 
 - `Server` 在此代表邏輯物件，不代表必須啟動網路服務。
 - 方法名稱須描述用途，例如 `parse_question_detail`、`export_qa_csv`。
+- 所有函式與方法都須明確標註參數及回傳值型別，以提升可讀性與可維護性；`self`、`cls` 不需額外標註。
+- 無回傳值使用 `-> None`；空值使用 `None`，可空型別使用 `T | None`（不使用 `Optional`）；容器須標註元素型別，例如 `list[str]`。避免以 `Any` 取代已知型別。
 - 採用五行原則：每個方法主體最多五個非空白、非註解實體行。
 - 不可用分號或過長單行規避，應拆成有意義的單一職責方法。
 
@@ -93,3 +96,10 @@
 - 驗證三個以上回答的動態欄位，以及 CSV 換行／引號往返。
 - 最終 CSV 資料列數須等於成功詳情 JSON 筆數，ID 必須唯一。
 - 即時網站筆數可能變動，不以本次觀察的 20／13 筆作永久斷言。
+
+## 寫法與格式
+
+- 資料模型使用 Pydantic BaseModel，不使用 TypedDict 或 cast。
+- Pydantic 模型統一放在根目錄 schemas/，依用途分檔（例如 schemas/forum_list.py）；Server 只匯入模型，不在其中定義。
+- 語意相同時優先正向條件；需要區分 None 與空字串、零、空容器時保留明確判斷。
+- 使用 `uv run ruff format .` 統一格式，設定以 pyproject.toml 為準。
