@@ -5,7 +5,7 @@ from server.crawl_server import CrawlServer
 from server.http_server import HttpServer
 
 
-def main():
+def main() -> None:
     http = HttpServer()
     try:
         CrawlServer(http).run()
