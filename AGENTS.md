@@ -18,18 +18,18 @@
 
 - 遍歷所有 `tbody` 的資料列。
 - 回覆狀態欄位文字須包含「已回覆」才收錄；空白或其他狀態一律跳過。
-- 若狀態欄位節點不存在，應記錄結構解析錯誤，不能當作一般未回覆。
+- 若狀態欄位節點不存在，直接拋出結構解析錯誤，不能當作一般未回覆。
 
 ## 3. ID 與去重
 
 - ID 使用詳情 URL 的 `p` 參數，以字串保存。
-- 列表及詳情 JSON 均以 ID 去重。跨頁出現相同 ID 時只保留一筆，並記錄來源頁碼。
+- 列表及詳情 JSON 均以 ID 去重。遇到相同 ID 直接跳過，只保留第一筆，不合併資料。
 - 不同 ID 即使標題相同也不得直接合併。
-- 缺少合法 ID 的資料列應記錄異常，不得自行編號替代。
+- 缺少合法 ID 的資料列直接拋出異常，不得自行編號替代。
 
 ## 4. JSON 欄位
 
-- 列表資料至少包含 `id`、`title`、`url`、`reply_status`、`published_at`、`source_pages`。
+- 列表資料至少包含 `id`、`title`、`url`、`reply_status`、`published_at`。
 - 詳情資料沿用列表欄位，另包含 `question`、`question_raw_html`、`asker_name`、`industry`、`region`、`asked_at`、`view_count`、`answers`、`fetched_at`。
 - `answers` 為陣列，每項包含 `order`、`accountant_name`、`accountant_role`、`answered_at`、`text`、`raw_html`、`notice_text`。
 - 缺失的非必要欄位使用 `null`，不推測補值。
@@ -54,26 +54,20 @@
 
 - HTTP 層僅使用 requests 的 `response.raise_for_status()` 檢查狀態，不額外偵測驗證頁。
 - HTTP、連線及逾時錯誤直接向上拋出，不自動重連、重試、退避或處理 `Retry-After`。
-- 列表與詳情仍依指定欄位解析；缺少問題正文或有效回答時列入失敗清單，不得算作成功 QA。
+- 列表與詳情仍依指定欄位解析；缺少問題正文或有效回答時直接拋出錯誤，不得算作成功 QA。
 
 ## 8. HTTP 存取與續跑
 
 - 使用單一 requests.Session，預設請求間隔 2～3 秒，由 HttpServer 建構參數調整；不添加逾時或並行設定。
 - 使用正常 TLS 驗證。
-- 保存已成功 ID 與失敗清單，支援續跑。
+- 任務錯誤直接拋出並中斷，不保存失敗清單、部分進度或自動續跑。
 - 輸出採暫存檔完成後替換，避免中斷造成 JSON 損毀。
 
-## 9. 執行紀錄
+## 9. 執行輸出
 
-每次執行須記錄下列資訊：
-
-- 開始／結束時間及總耗時。
-- 預定／成功／失敗列表頁數。
-- 讀取列數、未回覆跳過數、重複數、解析異常數。
-- 唯一合格 ID 數。
-- 詳情成功／失敗數、總回答數及 CSV 列數。
-
-總耗時包含等待、重試與輸出時間。部分失敗必須明確標示，不得報告全部完成。
+- 不建立 report、統計或執行紀錄 JSON；僅輸出資料檔。
+- 抓取與解析錯誤直接 raise，讓任務中斷並顯示錯誤。
+- main.py 入口印出開始／結束時間及總耗時，Server 不負責計時。
 
 ## 10. 物件責任與五行原則
 
@@ -84,9 +78,8 @@
 | `HttpServer` | HTTP 存取 |
 | `ForumListServer` | 列表解析 |
 | `QuestionDetailServer` | 詳情解析 |
-| `DeduplicationServer` | 去重 |
 | `ExportServer` | 輸出 |
-| `CrawlServer` | 流程協調 |
+| `CrawlServer` | 流程協調及重複 ID 跳過 |
 
 - `Server` 在此代表邏輯物件，不代表必須啟動網路服務。
 - 方法名稱須描述用途，例如 `parse_question_detail`、`export_qa_csv`。
